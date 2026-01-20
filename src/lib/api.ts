@@ -45,7 +45,16 @@ export class ApiClient {
   }
 
   public async getPositions() {
-    return this.fetch<{ positions: any[] }>("/portfolio/positions");
+    return this.fetch<{
+      positions: Array<{
+        ticker: string;
+        qty: number;
+        market_value: number;
+        cost_basis: number;
+        unrealized_pl: number;
+        unrealized_plpc: number;
+      }>;
+    }>("/portfolio/positions");
   }
 
   public async getMarketStatus() {

@@ -129,43 +129,43 @@ export function LiveDebateFloor() {
   };
 
   return (
-    <Card className="h-full flex flex-col border-none shadow-none bg-zinc-950 text-xs font-mono rounded-none border-l border-zinc-800">
-      <CardHeader className="bg-zinc-900/50 py-2 border-b border-zinc-800">
-        <CardTitle className="flex items-center justify-between text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
+    <Card className="h-full flex flex-col border-none shadow-none bg-background text-xs font-mono rounded-none border-l border-border">
+      <CardHeader className="bg-card/50 py-2 border-b border-border">
+        <CardTitle className="flex items-center justify-between text-muted-foreground text-[10px] uppercase tracking-widest font-bold">
           <span>Framework Execution Audit</span>
           <div className="flex items-center gap-2">
-            <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-zinc-700"}`} />
+            <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"}`} />
             <span className="text-[10px] uppercase">{isConnected ? "Streaming" : "Offline"}</span>
           </div>
         </CardTitle>
         {schemaError && (
-          <div className="bg-rose-500/20 text-rose-500 text-[9px] px-2 py-1 mt-2 rounded border border-rose-500/30 animate-pulse">
+          <div className="bg-destructive/20 text-destructive text-[9px] px-2 py-1 mt-2 rounded border border-destructive/30 animate-pulse">
             CRITICAL: {schemaError}
           </div>
         )}
       </CardHeader>
-      <CardContent className="flex-1 p-0 overflow-hidden bg-black">
+      <CardContent className="flex-1 p-0 overflow-hidden bg-background">
         <ScrollArea className="h-full">
           <div ref={scrollRef} className="p-2 space-y-1">
             {logs.map((log) => (
-              <div key={log.id} className="flex flex-col border-b border-zinc-900 pb-1.5 mb-1 leading-relaxed">
+              <div key={log.id} className="flex flex-col border-b border-border/40 pb-1.5 mb-1 leading-relaxed">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-zinc-600 text-[9px]">{log.timestamp}</span>
-                  <span className="text-blue-500 font-bold tracking-tighter">{log.ticker.toUpperCase()}</span>
-                  <span className="bg-zinc-800 px-1 rounded text-[9px] text-zinc-400">{log.badge}</span>
+                  <span className="text-muted-foreground/60 text-[9px]">{log.timestamp}</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold tracking-tighter">{log.ticker.toUpperCase()}</span>
+                  <span className="bg-muted px-1 rounded text-[9px] text-muted-foreground">{log.badge}</span>
                   <span className={cn("font-bold text-[10px]", getSignalColor(log.signal))}>{log.signal}</span>
                   {log.confidence > 0 && (
-                    <span className="text-zinc-500 text-[9px]">C:{Math.round(log.confidence * 100)}%</span>
+                    <span className="text-muted-foreground text-[9px]">C:{Math.round(log.confidence * 100)}%</span>
                   )}
                   {log.magnitude !== 0 && (
-                    <span className="text-zinc-500 text-[9px]">M:{(log.magnitude * 100).toFixed(1)}%</span>
+                    <span className="text-muted-foreground text-[9px]">M:{(log.magnitude * 100).toFixed(1)}%</span>
                   )}
                 </div>
-                <span className="text-zinc-400 text-[11px] font-sans pl-2 border-l border-zinc-800 ml-1 line-clamp-2">{log.rationale}</span>
+                <span className="text-foreground/80 text-[11px] font-sans pl-2 border-l border-border/60 ml-1 line-clamp-2">{log.rationale}</span>
               </div>
             ))}
             {logs.length === 0 && (
-              <div className="text-zinc-700 italic p-4 text-center">Awaiting framework signals...</div>
+              <div className="text-muted-foreground italic p-4 text-center">Awaiting framework signals...</div>
             )}
           </div>
         </ScrollArea>
