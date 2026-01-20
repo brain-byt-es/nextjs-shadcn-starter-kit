@@ -49,15 +49,18 @@ export function LiveDebateFloor() {
   const updateTicker = useUniverseStore((state) => state.updateTicker);
 
   useEffect(() => {
+    console.log("Establishing SSE Connection to GLOBAL...");
     const eventSource = api.streamAnalysis("GLOBAL"); 
 
     eventSource.onopen = () => {
+      console.log("SSE Connection Opened");
       setIsConnected(true);
       setSchemaError(null);
     };
 
-    eventSource.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       if (event.data === "[DONE]") {
+        console.log("SSE Stream Complete");
         setIsConnected(false);
         return;
       }
@@ -67,8 +70,7 @@ export function LiveDebateFloor() {
         const result = SSEEventSchema.safeParse(rawData);
         
         if (!result.success) {
-          console.error("Schema Validation Mismatch:", result.error);
-          setSchemaError("Protocol Version Mismatch Detected");
+          console.error("SSE Validation Error:", result.error);
           return;
         }
 
@@ -95,21 +97,31 @@ export function LiveDebateFloor() {
           signal: (data.signal || "NEUTRAL").toUpperCase() as "BULLISH" | "BEARISH" | "NEUTRAL",
           confidence: confidence,
           magnitude: magnitude,
-          rationale: data.content || "Optimizing framework...",
+          rationale: data.content || "Processing...",
         };
         
-        setLogs((prev) => [...prev.slice(-199), newLog]);
-      } catch {
-        // Skip pings
+        setLogs((prev) => {
+          // Prevent duplicates if the message is re-sent
+          const isDuplicate = prev.some(l => l.timestamp === newLog.timestamp && l.agentId === newLog.agentId && l.rationale === newLog.rationale);
+          if (isDuplicate) return prev;
+          return [...prev.slice(-199), newLog];
+        });
+      } catch (err) {
+        // Silently skip non-JSON messages (like pings or bypass comments)
       }
     };
 
-    eventSource.onerror = () => {
+    eventSource.addEventListener("message", handleMessage);
+
+    eventSource.onerror = (err) => {
+      console.error("SSE Connection Error:", err);
       setIsConnected(false);
       eventSource.close();
     };
 
     return () => {
+      console.log("Closing SSE Connection");
+      eventSource.removeEventListener("message", handleMessage);
       eventSource.close();
     };
   }, [updateTicker]);
