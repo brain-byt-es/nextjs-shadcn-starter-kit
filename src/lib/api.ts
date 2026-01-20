@@ -44,6 +44,10 @@ export class ApiClient {
     }>("/portfolio/stats");
   }
 
+  public async getPositions() {
+    return this.fetch<{ positions: any[] }>("/portfolio/positions");
+  }
+
   public async getMarketStatus() {
     return this.fetch<{ is_open: boolean; next_open: string }>("/market-status");
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import { useUniverseStore } from "@/store/useUniverseStore";
 import { StrategyCard } from "@/components/dashboard/StrategyCard";
 import { LiveDebateFloor } from "@/components/dashboard/LiveDebateFloor";
@@ -13,11 +14,16 @@ import {
   ChevronDown, 
   Activity, 
   LayoutGrid,
-  Zap
+  Zap,
+  Bot,
+  User
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/theme/theme-toggle";
 
 const DEFAULT_TICKERS = [
   "NVDA", "AAPL", "MSFT", "TSLA", "AMD", 
@@ -27,56 +33,23 @@ const DEFAULT_TICKERS = [
 ];
 
 export default function ExecutionTerminal() {
-  const { tickers, netEquity, buyingPower, activePositions, updateTicker, setGlobalMetrics } = useUniverseStore();
+  const { tickers, netEquity, buyingPower, activePositions, updateTicker, setGlobalMetrics, isAutoMode, setIsAutoMode } = useUniverseStore();
   const [isPortfolioOpen, setIsPortfolioOpen] = useState(true);
-
-  // Initialize universe
-  useEffect(() => {
-    DEFAULT_TICKERS.forEach(ticker => {
-      updateTicker(ticker, {
-        ticker,
-        price: 100 + Math.random() * 500,
-        score: 50,
-        signal: 'NEUTRAL',
-        altmanZ: 1.5 + Math.random() * 3, // Simulate institutional distress range
-        targetWeight: Math.random() * 0.1,
-        rsi: 30 + Math.random() * 40,
-        factors: {
-          value: 40 + Math.random() * 60,
-          quality: 40 + Math.random() * 60,
-          momentum: 40 + Math.random() * 60,
-          growth: 40 + Math.random() * 60,
-          risk: 40 + Math.random() * 60
-        }
-      });
-    });
-
-    // Mock global metrics update
-    setGlobalMetrics({
-      netEquity: 1245000,
-      buyingPower: 450000,
-      activePositions: 12
-    });
-  }, [updateTicker, setGlobalMetrics]);
-
-  const handleKillSwitch = () => {
-    toast.error("CRITICAL: MASS LIQUIDATION TRIGGERED", {
-      description: "Executing market sell orders for all active positions.",
-      duration: 5000,
-    });
-  };
 
   return (
     <div className="flex flex-col h-screen bg-black text-zinc-100 overflow-hidden font-sans">
+      <div className="bg-blue-600 text-white text-[10px] py-0.5 px-4 text-center font-bold tracking-widest uppercase">
+        QuantTrader Framework v2.0.1 (Institutional Build) | {isAutoMode ? "Autonomous Mode" : "Manual Gate"} | Connection: Active
+      </div>
       {/* Task 5: Global Control Bar */}
-      <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-950 shrink-0">
+      <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-950 shrink-0 z-50">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            <h1 className="text-sm font-black uppercase tracking-tighter">QuantTrader <span className="text-zinc-500">v2.0</span></h1>
+            <h1 className="text-sm font-black uppercase tracking-tighter">QuantTrader <span className="text-zinc-500 font-medium">v2.0</span></h1>
           </div>
           
-          <div className="hidden md:flex items-center gap-4 border-l border-zinc-800 pl-6 h-8">
+          <div className="hidden lg:flex items-center gap-4 border-l border-zinc-800 pl-6 h-8">
             <div className="flex flex-col">
               <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest leading-none">Net Equity</span>
               <span className="text-sm font-mono font-bold leading-none mt-1">${netEquity.toLocaleString()}</span>
@@ -87,26 +60,45 @@ export default function ExecutionTerminal() {
             </div>
             <div className="flex flex-col">
               <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest leading-none">Positions</span>
-              <span className="text-sm font-mono font-bold leading-none mt-1">{activePositions}</span>
+              <span className="text-sm font-mono font-bold leading-none mt-1 text-blue-400">{activePositions}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded border border-zinc-800">
-            <Wifi className="h-3 w-3 text-green-500" />
-            <span className="text-[10px] font-mono font-bold text-zinc-400">LATENCY: 12MS</span>
+        <div className="flex items-center gap-4">
+          {/* Bot/Human Mode Switch */}
+          <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900/80 rounded-md border border-zinc-800 h-9">
+            <Bot className={cn("h-4 w-4 transition-colors", isAutoMode ? "text-emerald-500" : "text-zinc-600")} />
+            <Switch 
+              id="bot-mode" 
+              checked={isAutoMode} 
+              onCheckedChange={setIsAutoMode}
+              className="data-[state=checked]:bg-emerald-500 scale-75"
+            />
+            <User className={cn("h-4 w-4 transition-colors", !isAutoMode ? "text-blue-500" : "text-zinc-600")} />
+            <span className="text-[10px] font-black uppercase tracking-widest ml-1 min-w-[70px] text-zinc-400">
+              {isAutoMode ? "AUTO-BOT" : "MANUAL"}
+            </span>
           </div>
-          
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={handleKillSwitch}
-            className="h-8 bg-red-600 hover:bg-red-700 text-[10px] font-black uppercase tracking-widest gap-2 px-4 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-          >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            Kill Switch
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded border border-zinc-800 h-9">
+              <Wifi className="h-3.5 w-3.5 text-green-500" />
+              <span className="text-[10px] font-mono font-bold text-zinc-400">12MS</span>
+            </div>
+            
+            <ModeToggle />
+
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleKillSwitch}
+              className="h-9 bg-red-600 hover:bg-red-700 text-[10px] font-black uppercase tracking-widest gap-2 px-4 shadow-[0_0_15px_rgba(220,38,38,0.2)] border-none"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              <span className="hidden md:inline">Kill Switch</span>
+            </Button>
+          </div>
         </div>
       </header>
 

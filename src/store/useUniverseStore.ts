@@ -44,11 +44,13 @@ interface UniverseState {
   buyingPower: number;
   netEquity: number;
   activePositions: number;
+  isAutoMode: boolean;
   
   updateTicker: (ticker: string, updates: Partial<TickerState>) => void;
   addInsight: (insight: InsightEntry) => void;
   setPositions: (positions: Position[]) => void;
   setGlobalMetrics: (metrics: { buyingPower: number; netEquity: number; activePositions: number }) => void;
+  setIsAutoMode: (isAutoMode: boolean) => void;
 }
 
 export const useUniverseStore = create<UniverseState>((set) => ({
@@ -58,6 +60,7 @@ export const useUniverseStore = create<UniverseState>((set) => ({
   buyingPower: 0,
   netEquity: 0,
   activePositions: 0,
+  isAutoMode: false,
 
   updateTicker: (ticker, updates) => set((state) => ({
     tickers: {
@@ -92,4 +95,6 @@ export const useUniverseStore = create<UniverseState>((set) => ({
     netEquity: metrics.netEquity,
     activePositions: metrics.activePositions
   }),
+
+  setIsAutoMode: (isAutoMode) => set({ isAutoMode }),
 }));
