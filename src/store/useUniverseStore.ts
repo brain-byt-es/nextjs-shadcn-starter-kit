@@ -45,12 +45,23 @@ interface UniverseState {
   netEquity: number;
   activePositions: number;
   isAutoMode: boolean;
+  universeCounts: {
+    base: number;
+    eligible: number;
+    selected: number;
+  };
+  rankedCandidates: Array<{
+    symbol: string;
+    score: number;
+    factors: Record<string, number>;
+  }>;
   
   updateTicker: (ticker: string, updates: Partial<TickerState>) => void;
   addInsight: (insight: InsightEntry) => void;
   setPositions: (positions: Position[]) => void;
   setGlobalMetrics: (metrics: { buyingPower: number; netEquity: number; activePositions: number }) => void;
   setIsAutoMode: (isAutoMode: boolean) => void;
+  setScreenerResults: (counts: { base: number; eligible: number; selected: number }, candidates: Array<{ symbol: string; score: number; factors: Record<string, number> }>) => void;
 }
 
 export const useUniverseStore = create<UniverseState>((set) => ({
@@ -61,6 +72,8 @@ export const useUniverseStore = create<UniverseState>((set) => ({
   netEquity: 0,
   activePositions: 0,
   isAutoMode: false,
+  universeCounts: { base: 0, eligible: 0, selected: 0 },
+  rankedCandidates: [],
 
   updateTicker: (ticker, updates) => set((state) => ({
     tickers: {
@@ -97,4 +110,9 @@ export const useUniverseStore = create<UniverseState>((set) => ({
   }),
 
   setIsAutoMode: (isAutoMode) => set({ isAutoMode }),
+
+  setScreenerResults: (counts, candidates) => set({
+    universeCounts: counts,
+    rankedCandidates: candidates
+  }),
 }));

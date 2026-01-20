@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useUniverseStore } from "@/store/useUniverseStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { SSEEventSchema } from "@/types/lean";
 
 interface AgentLogEntry {
   id: string;
@@ -20,6 +21,7 @@ interface AgentLogEntry {
 }
 
 const AGENTS = {
+  System: { badge: "SYSTEM | CORE" },
   Buffett: { badge: "ALPHA | VALUE" },
   Wood: { badge: "ALPHA | GROWTH" },
   Munger: { badge: "ALPHA | QUALITY" },
@@ -39,8 +41,6 @@ const AGENTS = {
   SentimentAnalyst: { badge: "SOCIAL | AGG" },
 };
 
-import { SSEEventSchema } from "@/types/lean";
-
 export function LiveDebateFloor() {
   const [logs, setLogs] = useState<AgentLogEntry[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ export function LiveDebateFloor() {
       setSchemaError(null);
     };
 
-    const handleMessage = (event: MessageEvent) => {
+    eventSource.onmessage = (event) => {
       if (event.data === "[DONE]") {
         console.log("SSE Stream Complete");
         setIsConnected(false);
@@ -66,7 +66,26 @@ export function LiveDebateFloor() {
       }
 
       try {
+        console.log("SSE Message Received:", event.data);
         const rawData = JSON.parse(event.data);
+        
+        // Handle specialized events first
+        if (rawData.type === "universe") {
+          useUniverseStore.getState().setScreenerResults(
+            { base: rawData.base_count, eligible: rawData.eligible_count, selected: rawData.selected_symbols.length },
+            useUniverseStore.getState().rankedCandidates
+          );
+          return;
+        }
+        
+        if (rawData.type === "ranking") {
+          useUniverseStore.getState().setScreenerResults(
+            useUniverseStore.getState().universeCounts,
+            rawData.top_k
+          );
+          return;
+        }
+
         const result = SSEEventSchema.safeParse(rawData);
         
         if (!result.success) {
@@ -76,6 +95,7 @@ export function LiveDebateFloor() {
 
         const data = result.data;
         const ticker = data.ticker || "SYSTEM";
+        // Normalize agent name for AGENTS lookup (e.g. TechnicalAnalyst)
         const agentName = data.agent || "UNKNOWN";
         
         const confidence = data.confidence || 0;
@@ -101,17 +121,14 @@ export function LiveDebateFloor() {
         };
         
         setLogs((prev) => {
-          // Prevent duplicates if the message is re-sent
-          const isDuplicate = prev.some(l => l.timestamp === newLog.timestamp && l.agentId === newLog.agentId && l.rationale === newLog.rationale);
+          const isDuplicate = prev.some(l => l.agentId === newLog.agentId && l.rationale === newLog.rationale && l.ticker === newLog.ticker);
           if (isDuplicate) return prev;
           return [...prev.slice(-199), newLog];
         });
-      } catch (err) {
-        // Silently skip non-JSON messages (like pings or bypass comments)
+      } catch {
+        // Skip pings/comments
       }
     };
-
-    eventSource.addEventListener("message", handleMessage);
 
     eventSource.onerror = (err) => {
       console.error("SSE Connection Error:", err);
@@ -121,10 +138,10 @@ export function LiveDebateFloor() {
 
     return () => {
       console.log("Closing SSE Connection");
-      eventSource.removeEventListener("message", handleMessage);
       eventSource.close();
     };
   }, [updateTicker]);
+
 
   useEffect(() => {
     if (scrollRef.current) {

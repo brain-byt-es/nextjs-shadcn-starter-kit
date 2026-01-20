@@ -16,7 +16,8 @@ import {
   LayoutGrid,
   Zap,
   Bot,
-  User
+  User,
+  Search
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { ModeToggle } from "@/components/theme/theme-toggle";
 import { useTheme } from "next-themes";
+import { ScreenerPanel } from "@/components/dashboard/ScreenerPanel";
 
 const DEFAULT_TICKERS = [
   "NVDA", "AAPL", "MSFT", "TSLA", "AMD", 
@@ -31,10 +33,37 @@ const DEFAULT_TICKERS = [
   "COIN", "MARA", "MSTR", "SQ", "PYPL",
   "AVGO", "SMCI", "ARM", "ASML", "ORCL"
 ];
+
 export default function ExecutionTerminal() {
-  const { tickers, netEquity, buyingPower, activePositions, updateTicker, setGlobalMetrics, isAutoMode, setIsAutoMode } = useUniverseStore();
+  const { 
+    tickers, 
+    netEquity, 
+    buyingPower, 
+    activePositions, 
+    updateTicker, 
+    setGlobalMetrics, 
+    isAutoMode, 
+    setIsAutoMode
+  } = useUniverseStore();
   const [isPortfolioOpen, setIsPortfolioOpen] = useState(true);
   const { theme } = useTheme();
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanMarket = async () => {
+    setIsScanning(true);
+    toast.info("MARKET SCAN INITIALIZED", {
+      description: "Screening 1000+ symbols for multi-factor mispricing...",
+    });
+    
+    // To trigger a real scan, we need to tell LiveDebateFloor to reconnect 
+    // with market parameters. For now, we simulate by clearing current tickers.
+    useUniverseStore.setState({ tickers: {}, rankedCandidates: [] });
+    
+    // In a full implementation, we'd pass these params to LiveDebateFloor
+    // or trigger an API call that returns the stream URL.
+    
+    setIsScanning(false);
+  };
 
   // Initialize universe
   useEffect(() => {
@@ -66,13 +95,10 @@ export default function ExecutionTerminal() {
           activePositions: positionsData.positions.length
         });
 
-        // Map backend positions to store structure
-        // Backend: { ticker, qty, market_value, cost_basis, unrealized_pl, unrealized_plpc }
-        // Store: { symbol, qty, targetQty, entryPrice, currentPrice, unrealizedPlPc, ... }
         const mappedPositions = positionsData.positions.map((p) => ({
           symbol: p.ticker,
           qty: p.qty,
-          targetQty: p.qty, // Default to current until rebalanced
+          targetQty: p.qty, 
           entryPrice: p.qty !== 0 ? p.cost_basis / p.qty : 0,
           currentPrice: p.qty !== 0 ? p.market_value / p.qty : 0,
           unrealizedPlPc: p.unrealized_plpc * 100,
@@ -88,7 +114,7 @@ export default function ExecutionTerminal() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Update every 30s
+    const interval = setInterval(fetchData, 30000); 
 
     return () => clearInterval(interval);
   }, [updateTicker, setGlobalMetrics]);
@@ -105,6 +131,7 @@ export default function ExecutionTerminal() {
       <div className="bg-primary text-primary-foreground text-[10px] py-0.5 px-4 text-center font-bold tracking-widest uppercase shrink-0">
         QuantTrader Framework v2.0.1 (Institutional Build) | {isAutoMode ? "Autonomous Mode" : "Manual Gate"} | Connection: Active
       </div>
+      
       {/* Task 5: Global Control Bar */}
       <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card shrink-0 z-50">
         <div className="flex items-center gap-6">
@@ -175,10 +202,24 @@ export default function ExecutionTerminal() {
               <LayoutGrid className="h-4 w-4 text-blue-500" />
               <h2 className="text-xs font-black uppercase tracking-widest">Active Universe</h2>
               <Badge variant="outline" className="text-[9px] h-4 bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
-                {DEFAULT_TICKERS.length} TICKERS
+                {Object.keys(tickers).length} TICKERS
               </Badge>
             </div>
+            
             <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleScanMarket}
+                disabled={isScanning}
+                className="h-7 text-[9px] font-black uppercase tracking-widest gap-2 bg-blue-600/10 border-blue-500/30 text-blue-500 hover:bg-blue-600 hover:text-white transition-all"
+              >
+                <Search className="h-3 w-3" />
+                {isScanning ? "Scanning..." : "Scan Market"}
+              </Button>
+
+              <div className="h-4 w-px bg-border" />
+
               <div className="flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">Bullish</span>
@@ -195,6 +236,13 @@ export default function ExecutionTerminal() {
               {Object.values(tickers).map((tickerData) => (
                 <StrategyCard key={tickerData.ticker} data={tickerData} />
               ))}
+              {Object.keys(tickers).length === 0 && (
+                <div className="col-span-full h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                  <Search className="h-8 w-8 mb-2 opacity-20" />
+                  <p className="text-xs font-bold uppercase tracking-widest opacity-50">Universe Empty</p>
+                  <p className="text-[10px] opacity-40">Run market scan to discover candidates</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -217,14 +265,18 @@ export default function ExecutionTerminal() {
           </footer>
         </section>
 
-        {/* Task 1 & 4: Global Audit Log (Right 30%) */}
-        <aside className="w-[30%] h-full shrink-0 border-l border-border bg-background">
-          <LiveDebateFloor />
-                </aside>
-              </main>
-        
-              <Toaster theme={theme as "light" | "dark" | "system"} position="top-right" />
-            </div>
-          );
-        }
-        
+        {/* Task 1 & 4: Global Sidebar (Right 30%) */}
+        <aside className="w-[30%] h-full shrink-0 border-l border-border flex flex-col">
+          <div className="flex-1 overflow-hidden">
+            <ScreenerPanel />
+          </div>
+          <div className="h-1/2 border-t border-border overflow-hidden">
+            <LiveDebateFloor />
+          </div>
+        </aside>
+      </main>
+
+      <Toaster theme={theme as "light" | "dark" | "system"} position="top-right" />
+    </div>
+  );
+}

@@ -104,15 +104,29 @@ export function PortfolioTable() {
 
 
 
-  const table = useReactTable({
+    const table = useReactTable({ // eslint-disable-line react-hooks/incompatible-library
 
-    data: positions,
 
-    columns,
 
-    getCoreRowModel: getCoreRowModel(),
+      data: positions,
 
-  });
+
+
+      columns,
+
+
+
+      getCoreRowModel: getCoreRowModel(),
+
+
+
+    });
+
+
+
+  
+
+
 
 
 
